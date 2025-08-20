@@ -3,20 +3,35 @@ import { cloneElement, createContext, isValidElement, useCallback, useContext, u
 const VisibilityContext = createContext(undefined);
 function visibilityReducer(state, action) {
     switch (action.type) {
-        case 'TOGGLE':
-            return { ...state, [action.key]: !state[action.key] };
-        case 'SET':
-            return { ...state, [action.key]: action.value };
+        case 'TOGGLE': {
+            const newValue = !state[action.key];
+            if (action.mode === 'single' && newValue) {
+                return { [action.key]: true };
+            }
+            return {
+                ...state,
+                [action.key]: newValue,
+            };
+        }
+        case 'SET': {
+            if (action.mode === 'single' && action.value) {
+                return { [action.key]: true };
+            }
+            return {
+                ...state,
+                [action.key]: action.value,
+            };
+        }
         case 'RESET':
-            return { ...action.initial };
+            return action.initial;
         default:
             return state;
     }
 }
-export const VisibilityProvider = ({ children, initialState = {}, }) => {
+export const VisibilityProvider = ({ children, initialState = {}, mode = 'multiple', }) => {
     const [state, dispatch] = useReducer(visibilityReducer, initialState);
-    const toggle = useCallback((key) => dispatch({ type: 'TOGGLE', key }), []);
-    const set = useCallback((key, value) => dispatch({ type: 'SET', key, value }), []);
+    const toggle = useCallback((key) => dispatch({ type: 'TOGGLE', key, mode }), [mode]);
+    const set = useCallback((key, value) => dispatch({ type: 'SET', key, value, mode }), [mode]);
     const reset = useCallback((initial) => dispatch({ type: 'RESET', initial }), []);
     return (_jsx(VisibilityContext.Provider, { value: { state, toggle, set, reset }, children: children }));
 };

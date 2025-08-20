@@ -6,9 +6,11 @@ type VisibilityContextValue = {
     set: (key: string, value: boolean) => void;
     reset: (initial: VisibilityState) => void;
 };
+type VisibilityMode = 'single' | 'multiple';
 type VisibilityProviderProps = {
     children: ReactNode;
     initialState?: VisibilityState;
+    mode?: VisibilityMode;
 };
 export declare const VisibilityProvider: FC<VisibilityProviderProps>;
 export declare function useVisibility(): VisibilityContextValue;

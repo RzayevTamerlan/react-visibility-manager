@@ -2,7 +2,7 @@
 
 A simple, headless, and unopinionated React utility to manage visibility state for components like dropdowns, modals, tooltips, and accordions using React's Context API.
 
-[![npm version](https://badge.fury.io/js/%40tamerlanrzayev%2Freact-visibility-manager.svg)](https://www.npmjs.com/package/@tamerlanrzayev/react-visibility-manager)
+[![npm version](https://badge.fury.io/js/react-visibility-manager.svg)](https://www.npmjs.com/package/react-visibility-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
