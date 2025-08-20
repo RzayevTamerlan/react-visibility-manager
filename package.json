@@ -1,15 +1,24 @@
 {
   "name": "react-visibility-manager",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "A simple React component to manage visibility state logic.",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build:types": "tsc -p tsconfig.types.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build": "npm run build:types && npm run build:cjs && npm run build:esm",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -21,7 +30,6 @@
   ],
   "author": "Tamerlan Rzayev",
   "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
     "@types/react": "^19.1.10",
     "react": "^19.1.1",
