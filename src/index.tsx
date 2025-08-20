@@ -14,8 +14,8 @@ import {
 type VisibilityState = Record<string, boolean>;
 
 type VisibilityAction =
-  | { type: 'TOGGLE'; key: string }
-  | { type: 'SET'; key: string; value: boolean }
+  | { type: 'TOGGLE'; key: string; mode: VisibilityMode }
+  | { type: 'SET'; key: string; value: boolean; mode: VisibilityMode }
   | { type: 'RESET'; initial: VisibilityState };
 
 type VisibilityContextValue = {
@@ -23,39 +23,62 @@ type VisibilityContextValue = {
   toggle: (key: string) => void;
   set: (key: string, value: boolean) => void;
   reset: (initial: VisibilityState) => void;
-}
+};
 
 const VisibilityContext = createContext<VisibilityContextValue | undefined>(undefined);
 
 function visibilityReducer(state: VisibilityState, action: VisibilityAction): VisibilityState {
   switch (action.type) {
-    case 'TOGGLE':
-      return { ...state, [action.key]: !state[action.key] };
-    case 'SET':
-      return { ...state, [action.key]: action.value };
+    case 'TOGGLE': {
+      const newValue = !state[action.key];
+      if (action.mode === 'single' && newValue) {
+        return { [action.key]: true };
+      }
+      return {
+        ...state,
+        [action.key]: newValue,
+      };
+    }
+
+    case 'SET': {
+      if (action.mode === 'single' && action.value) {
+        return { [action.key]: true };
+      }
+      return {
+        ...state,
+        [action.key]: action.value,
+      };
+    }
+
     case 'RESET':
-      return { ...action.initial };
+      return action.initial;
     default:
       return state;
   }
 }
 
+type VisibilityMode = 'single' | 'multiple';
+
 type VisibilityProviderProps = {
   children: ReactNode;
   initialState?: VisibilityState;
-}
+  mode?: VisibilityMode;
+};
 
 export const VisibilityProvider: FC<VisibilityProviderProps> = ({
   children,
   initialState = {},
+  mode = 'multiple',
 }) => {
   const [state, dispatch] = useReducer(visibilityReducer, initialState);
 
-  const toggle = useCallback((key: string) => dispatch({ type: 'TOGGLE', key }), []);
+  const toggle = useCallback((key: string) => dispatch({ type: 'TOGGLE', key, mode }), [mode]);
+
   const set = useCallback(
-    (key: string, value: boolean) => dispatch({ type: 'SET', key, value }),
-    [],
+    (key: string, value: boolean) => dispatch({ type: 'SET', key, value, mode }),
+    [mode],
   );
+
   const reset = useCallback((initial: VisibilityState) => dispatch({ type: 'RESET', initial }), []);
 
   return (
@@ -80,7 +103,7 @@ type VisibilityTargetProps = {
   shouldRender?: boolean;
   wrapper?: (node: ReactElement, isOpen: boolean) => ReactElement;
   [key: string]: unknown;
-}
+};
 
 export const VisibilityTarget: FC<VisibilityTargetProps> = ({
   children,
