@@ -3,6 +3,7 @@ import {
   createContext,
   type FC,
   isValidElement,
+  memo,
   type MouseEvent,
   type ReactElement,
   type ReactNode,
@@ -11,14 +12,14 @@ import {
   useReducer,
 } from 'react';
 
-type VisibilityState = Record<string, boolean>;
+export type VisibilityState = Record<string, boolean>;
 
 type VisibilityAction =
   | { type: 'TOGGLE'; key: string; mode: VisibilityMode }
   | { type: 'SET'; key: string; value: boolean; mode: VisibilityMode }
   | { type: 'RESET'; initial: VisibilityState };
 
-type VisibilityContextValue = {
+export type VisibilityContextValue = {
   state: VisibilityState;
   toggle: (key: string) => void;
   set: (key: string, value: boolean) => void;
@@ -57,15 +58,15 @@ function visibilityReducer(state: VisibilityState, action: VisibilityAction): Vi
   }
 }
 
-type VisibilityMode = 'single' | 'multiple';
+export type VisibilityMode = 'single' | 'multiple';
 
-type VisibilityProviderProps = {
+export type VisibilityProviderProps = {
   children: ReactNode;
   initialState?: VisibilityState;
   mode?: VisibilityMode;
 };
 
-export const VisibilityProvider: FC<VisibilityProviderProps> = ({
+const VisibilityProvider: FC<VisibilityProviderProps> = ({
   children,
   initialState = {},
   mode = 'multiple',
@@ -88,7 +89,9 @@ export const VisibilityProvider: FC<VisibilityProviderProps> = ({
   );
 };
 
-export function useVisibility(): VisibilityContextValue {
+const MemoizedVisibilityProvider = memo(VisibilityProvider);
+
+function useVisibility(): VisibilityContextValue {
   const context = useContext(VisibilityContext);
   if (!context) {
     throw new Error('useVisibility must be used within a VisibilityProvider');
@@ -96,7 +99,7 @@ export function useVisibility(): VisibilityContextValue {
   return context;
 }
 
-type VisibilityTargetProps = {
+export type VisibilityTargetProps = {
   children: ReactElement;
   targetKey: string;
   isOpenPropName?: string;
@@ -105,7 +108,7 @@ type VisibilityTargetProps = {
   [key: string]: unknown;
 };
 
-export const VisibilityTarget: FC<VisibilityTargetProps> = ({
+const VisibilityTarget: FC<VisibilityTargetProps> = ({
   children,
   targetKey,
   isOpenPropName = 'isOpen',
@@ -113,8 +116,7 @@ export const VisibilityTarget: FC<VisibilityTargetProps> = ({
   wrapper,
   ...restProps
 }) => {
-  const { state } = useVisibility();
-  const isOpen = Boolean(state[targetKey]);
+  const { isOpen } = useVisibilityTarget(targetKey);
 
   const newProps: Record<string, unknown> = {
     // @ts-expect-error Children first approach has bad TS support
@@ -132,6 +134,8 @@ export const VisibilityTarget: FC<VisibilityTargetProps> = ({
   return wrapper ? wrapper(cloned, isOpen) : cloned;
 };
 
+const MemoizedVisibilityTarget = memo(VisibilityTarget);
+
 interface VisibilityTriggerProps {
   children: ReactElement;
   triggerKey: string;
@@ -139,13 +143,13 @@ interface VisibilityTriggerProps {
   [key: string]: unknown;
 }
 
-export const VisibilityTrigger: FC<VisibilityTriggerProps> = ({
+const VisibilityTrigger: FC<VisibilityTriggerProps> = ({
   children,
   triggerKey,
   propName = 'onClick',
   ...restProps
 }) => {
-  const { toggle } = useVisibility();
+  const { toggle } = useVisibilityTarget(triggerKey);
 
   if (!children) {
     throw new Error('VisibilityTrigger requires a child element');
@@ -158,10 +162,13 @@ export const VisibilityTrigger: FC<VisibilityTriggerProps> = ({
   // @ts-expect-error Children first approach has bad TS support
   const existingOnClick = children?.props[propName] as ((e: MouseEvent) => void) | undefined;
 
-  const handleClick = (e: MouseEvent) => {
-    existingOnClick?.(e);
-    toggle(triggerKey);
-  };
+  const handleClick = useCallback(
+    (e: MouseEvent) => {
+      existingOnClick?.(e);
+      toggle();
+    },
+    [existingOnClick, toggle],
+  );
 
   // @ts-expect-error Children first approach has bad TS support
   const newProps = { ...children?.props, restProps, [propName]: handleClick };
@@ -169,13 +176,15 @@ export const VisibilityTrigger: FC<VisibilityTriggerProps> = ({
   return cloneElement(children, newProps);
 };
 
-type UseVisibilityTargetResult = {
+const MemoizedVisibilityTrigger = memo(VisibilityTrigger);
+
+export type UseVisibilityTargetResult = {
   isOpen: boolean;
   toggle: () => void;
   set: (value: boolean) => void;
 };
 
-export function useVisibilityTarget(targetKey: string): UseVisibilityTargetResult {
+function useVisibilityTarget(targetKey: string): UseVisibilityTargetResult {
   const { state, toggle: globalToggle, set: globalSet } = useVisibility();
   const isOpen = Boolean(state[targetKey]);
 
@@ -195,3 +204,11 @@ export function useVisibilityTarget(targetKey: string): UseVisibilityTargetResul
     set,
   };
 }
+
+export {
+  useVisibility,
+  useVisibilityTarget,
+  MemoizedVisibilityProvider as VisibilityProvider,
+  MemoizedVisibilityTarget as VisibilityTarget,
+  MemoizedVisibilityTrigger as VisibilityTrigger,
+};
