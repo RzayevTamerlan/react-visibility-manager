@@ -40,7 +40,8 @@ const VisibilityProvider = ({ children, initialState = {}, mode = 'multiple', })
     const reset = (0, react_1.useCallback)((initial) => dispatch({ type: 'RESET', initial }), []);
     return ((0, jsx_runtime_1.jsx)(VisibilityContext.Provider, { value: { state, toggle, set, reset }, children: children }));
 };
-exports.VisibilityProvider = VisibilityProvider;
+const MemoizedVisibilityProvider = (0, react_1.memo)(VisibilityProvider);
+exports.VisibilityProvider = MemoizedVisibilityProvider;
 function useVisibility() {
     const context = (0, react_1.useContext)(VisibilityContext);
     if (!context) {
@@ -49,8 +50,7 @@ function useVisibility() {
     return context;
 }
 const VisibilityTarget = ({ children, targetKey, isOpenPropName = 'isOpen', shouldRender = true, wrapper, ...restProps }) => {
-    const { state } = useVisibility();
-    const isOpen = Boolean(state[targetKey]);
+    const { isOpen } = useVisibilityTarget(targetKey);
     const newProps = {
         ...children.props,
         ...restProps,
@@ -62,9 +62,10 @@ const VisibilityTarget = ({ children, targetKey, isOpenPropName = 'isOpen', shou
     const cloned = (0, react_1.cloneElement)(children, newProps);
     return wrapper ? wrapper(cloned, isOpen) : cloned;
 };
-exports.VisibilityTarget = VisibilityTarget;
+const MemoizedVisibilityTarget = (0, react_1.memo)(VisibilityTarget);
+exports.VisibilityTarget = MemoizedVisibilityTarget;
 const VisibilityTrigger = ({ children, triggerKey, propName = 'onClick', ...restProps }) => {
-    const { toggle } = useVisibility();
+    const { toggle } = useVisibilityTarget(triggerKey);
     if (!children) {
         throw new Error('VisibilityTrigger requires a child element');
     }
@@ -72,14 +73,15 @@ const VisibilityTrigger = ({ children, triggerKey, propName = 'onClick', ...rest
         throw new Error('VisibilityTrigger child must be a valid React element');
     }
     const existingOnClick = children?.props[propName];
-    const handleClick = (e) => {
+    const handleClick = (0, react_1.useCallback)((e) => {
         existingOnClick?.(e);
-        toggle(triggerKey);
-    };
+        toggle();
+    }, [existingOnClick, toggle]);
     const newProps = { ...children?.props, restProps, [propName]: handleClick };
     return (0, react_1.cloneElement)(children, newProps);
 };
-exports.VisibilityTrigger = VisibilityTrigger;
+const MemoizedVisibilityTrigger = (0, react_1.memo)(VisibilityTrigger);
+exports.VisibilityTrigger = MemoizedVisibilityTrigger;
 function useVisibilityTarget(targetKey) {
     const { state, toggle: globalToggle, set: globalSet } = useVisibility();
     const isOpen = Boolean(state[targetKey]);

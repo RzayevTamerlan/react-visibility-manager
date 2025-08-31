@@ -171,7 +171,7 @@ const VisibilityTrigger: FC<VisibilityTriggerProps> = ({
   );
 
   // @ts-expect-error Children first approach has bad TS support
-  const newProps = { ...children?.props, restProps, [propName]: handleClick };
+  const newProps = { ...children?.props, ...restProps, [propName]: handleClick };
 
   return cloneElement(children, newProps);
 };
