@@ -1,6 +1,5 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-import { cloneElement, createContext, isValidElement, memo, useCallback, useContext, useReducer, } from 'react';
-const VisibilityContext = createContext(undefined);
+import { cloneElement, createContext, isValidElement, memo, useCallback, useContext, useMemo, useReducer, } from 'react';
 function visibilityReducer(state, action) {
     switch (action.type) {
         case 'TOGGLE': {
@@ -28,54 +27,36 @@ function visibilityReducer(state, action) {
             return state;
     }
 }
+const VisibilityStateContext = createContext(undefined);
+const VisibilityActionsContext = createContext(undefined);
+VisibilityStateContext.displayName = 'VisibilityStateContext';
+VisibilityActionsContext.displayName = 'VisibilityActionsContext';
 const VisibilityProvider = ({ children, initialState = {}, mode = 'multiple', }) => {
     const [state, dispatch] = useReducer(visibilityReducer, initialState);
     const toggle = useCallback((key) => dispatch({ type: 'TOGGLE', key, mode }), [mode]);
     const set = useCallback((key, value) => dispatch({ type: 'SET', key, value, mode }), [mode]);
     const reset = useCallback((initial) => dispatch({ type: 'RESET', initial }), []);
-    return (_jsx(VisibilityContext.Provider, { value: { state, toggle, set, reset }, children: children }));
+    const actionsValue = useMemo(() => ({ toggle, set, reset }), [toggle, set, reset]);
+    return (_jsx(VisibilityActionsContext.Provider, { value: actionsValue, children: _jsx(VisibilityStateContext.Provider, { value: state, children: children }) }));
 };
 const MemoizedVisibilityProvider = memo(VisibilityProvider);
-function useVisibility() {
-    const context = useContext(VisibilityContext);
+function useVisibilityState() {
+    const context = useContext(VisibilityStateContext);
     if (!context) {
-        throw new Error('useVisibility must be used within a VisibilityProvider');
+        throw new Error('useVisibilityState must be used within a VisibilityProvider');
     }
     return context;
 }
-const VisibilityTarget = ({ children, targetKey, isOpenPropName = 'isOpen', shouldRender = true, wrapper, ...restProps }) => {
-    const { isOpen } = useVisibilityTarget(targetKey);
-    const newProps = {
-        ...children.props,
-        ...restProps,
-        [isOpenPropName]: isOpen,
-    };
-    if (!shouldRender && !isOpen) {
-        return null;
+function useVisibilityActions() {
+    const context = useContext(VisibilityActionsContext);
+    if (!context) {
+        throw new Error('useVisibilityActions must be used within a VisibilityProvider');
     }
-    const cloned = cloneElement(children, newProps);
-    return wrapper ? wrapper(cloned, isOpen) : cloned;
-};
-const MemoizedVisibilityTarget = memo(VisibilityTarget);
-const VisibilityTrigger = ({ children, triggerKey, propName = 'onClick', ...restProps }) => {
-    const { toggle } = useVisibilityTarget(triggerKey);
-    if (!children) {
-        throw new Error('VisibilityTrigger requires a child element');
-    }
-    if (!isValidElement(children)) {
-        throw new Error('VisibilityTrigger child must be a valid React element');
-    }
-    const existingOnClick = children?.props[propName];
-    const handleClick = useCallback((e) => {
-        existingOnClick?.(e);
-        toggle();
-    }, [existingOnClick, toggle]);
-    const newProps = { ...children?.props, restProps, [propName]: handleClick };
-    return cloneElement(children, newProps);
-};
-const MemoizedVisibilityTrigger = memo(VisibilityTrigger);
+    return context;
+}
 function useVisibilityTarget(targetKey) {
-    const { state, toggle: globalToggle, set: globalSet } = useVisibility();
+    const state = useVisibilityState();
+    const { toggle: globalToggle, set: globalSet } = useVisibilityActions();
     const isOpen = Boolean(state[targetKey]);
     const toggle = useCallback(() => {
         globalToggle(targetKey);
@@ -83,10 +64,34 @@ function useVisibilityTarget(targetKey) {
     const set = useCallback((value) => {
         globalSet(targetKey, value);
     }, [targetKey, globalSet]);
-    return {
-        isOpen,
-        toggle,
-        set,
-    };
+    return useMemo(() => ({ isOpen, toggle, set }), [isOpen, toggle, set]);
 }
-export { useVisibility, useVisibilityTarget, MemoizedVisibilityProvider as VisibilityProvider, MemoizedVisibilityTarget as VisibilityTarget, MemoizedVisibilityTrigger as VisibilityTrigger, };
+const VisibilityTarget = ({ children, targetKey, isOpenPropName = 'isOpen', shouldRender = true, wrapper, ...restProps }) => {
+    const { isOpen } = useVisibilityTarget(targetKey);
+    if (!shouldRender && !isOpen) {
+        return null;
+    }
+    const newProps = {
+        ...children.props,
+        ...restProps,
+        [isOpenPropName]: isOpen,
+    };
+    const cloned = cloneElement(children, newProps);
+    return wrapper ? wrapper(cloned, isOpen) : cloned;
+};
+const MemoizedVisibilityTarget = memo(VisibilityTarget);
+const VisibilityTrigger = ({ children, triggerKey, propName = 'onClick', ...restProps }) => {
+    const { toggle } = useVisibilityActions();
+    if (!isValidElement(children)) {
+        throw new Error('VisibilityTrigger child must be a valid React element');
+    }
+    const existingOnClick = children.props[propName];
+    const handleClick = useCallback((e) => {
+        existingOnClick?.(e);
+        toggle(triggerKey);
+    }, [existingOnClick, toggle, triggerKey]);
+    const newProps = { ...children.props, ...restProps, [propName]: handleClick };
+    return cloneElement(children, newProps);
+};
+const MemoizedVisibilityTrigger = memo(VisibilityTrigger);
+export { useVisibilityState, useVisibilityActions, useVisibilityTarget, MemoizedVisibilityProvider as VisibilityProvider, MemoizedVisibilityTarget as VisibilityTarget, MemoizedVisibilityTrigger as VisibilityTrigger, };

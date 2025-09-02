@@ -1,19 +1,25 @@
 import { type ReactElement, type ReactNode } from 'react';
 export type VisibilityState = Record<string, boolean>;
-export type VisibilityContextValue = {
-    state: VisibilityState;
+export type VisibilityMode = 'single' | 'multiple';
+type VisibilityActions = {
     toggle: (key: string) => void;
     set: (key: string, value: boolean) => void;
     reset: (initial: VisibilityState) => void;
 };
-export type VisibilityMode = 'single' | 'multiple';
 export type VisibilityProviderProps = {
     children: ReactNode;
     initialState?: VisibilityState;
     mode?: VisibilityMode;
 };
 declare const MemoizedVisibilityProvider: import("react").NamedExoticComponent<VisibilityProviderProps>;
-declare function useVisibility(): VisibilityContextValue;
+declare function useVisibilityState(): VisibilityState;
+declare function useVisibilityActions(): VisibilityActions;
+export type UseVisibilityTargetResult = {
+    isOpen: boolean;
+    toggle: () => void;
+    set: (value: boolean) => void;
+};
+declare function useVisibilityTarget(targetKey: string): UseVisibilityTargetResult;
 export type VisibilityTargetProps = {
     children: ReactElement;
     targetKey: string;
@@ -30,10 +36,4 @@ interface VisibilityTriggerProps {
     [key: string]: unknown;
 }
 declare const MemoizedVisibilityTrigger: import("react").NamedExoticComponent<VisibilityTriggerProps>;
-export type UseVisibilityTargetResult = {
-    isOpen: boolean;
-    toggle: () => void;
-    set: (value: boolean) => void;
-};
-declare function useVisibilityTarget(targetKey: string): UseVisibilityTargetResult;
-export { useVisibility, useVisibilityTarget, MemoizedVisibilityProvider as VisibilityProvider, MemoizedVisibilityTarget as VisibilityTarget, MemoizedVisibilityTrigger as VisibilityTrigger, };
+export { useVisibilityState, useVisibilityActions, useVisibilityTarget, MemoizedVisibilityProvider as VisibilityProvider, MemoizedVisibilityTarget as VisibilityTarget, MemoizedVisibilityTrigger as VisibilityTrigger, };
