@@ -13,6 +13,7 @@ A simple, headless, and unopinionated React utility to manage visibility state f
 - 🚀 **Easy to Use**: Get started in minutes with an intuitive component-based or hook-based API.
 - 🔵 **Typed**: Written in TypeScript for a great developer experience.
 - 🎯 **Single/Multiple Mode**: Choose between accordion-style single visibility or multiple simultaneous visibility.
+- ⚡ **Optimized**: Memoized components and hooks for better performance.
 
 -----
 
@@ -114,9 +115,20 @@ It returns an object with the following properties:
 - `toggle`: `() => void` - A function to toggle the state.
 - `set`: `(value: boolean) => void` - A function to explicitly set the state to `true` or `false`.
 
-### `useVisibility()`
+### `useVisibilityState()`
 
-A hook for advanced use cases that returns the entire context value, including the global state and dispatcher functions (`toggle`, `set`, `reset`).
+A hook that returns the entire visibility state object. Useful for reading multiple visibility states at once or for debugging purposes.
+
+Returns `Record<string, boolean>` - the complete visibility state.
+
+### `useVisibilityActions()`
+
+A hook that returns all the action functions for managing visibility state.
+
+Returns an object with:
+- `toggle`: `(key: string) => void` - Toggle visibility for any key
+- `set`: `(key: string, value: boolean) => void` - Set visibility for any key
+- `reset`: `(initial: VisibilityState) => void` - Reset to initial state
 
 -----
 
@@ -190,6 +202,40 @@ function App() {
     </VisibilityProvider>
   );
 }
+```
+
+### Using Low-Level Hooks for Complex Logic
+
+For advanced use cases, you can use the low-level hooks directly:
+
+```jsx
+import {
+  VisibilityProvider,
+  useVisibilityState,
+  useVisibilityActions,
+} from 'react-visibility-manager';
+
+const ComplexComponent = () => {
+  const state = useVisibilityState();
+  const { toggle, set, reset } = useVisibilityActions();
+
+  // Check if multiple items are open
+  const openItems = Object.entries(state).filter(([_, isOpen]) => isOpen);
+  const hasMultipleOpen = openItems.length > 1;
+
+  return (
+    <div>
+      <p>Currently open: {openItems.map(([key]) => key).join(', ')}</p>
+      {hasMultipleOpen && (
+        <button onClick={() => reset({})}>Close All</button>
+      )}
+      
+      <button onClick={() => toggle('item-1')}>Toggle Item 1</button>
+      <button onClick={() => toggle('item-2')}>Toggle Item 2</button>
+      <button onClick={() => set('item-3', true)}>Open Item 3</button>
+    </div>
+  );
+};
 ```
 
 ### Creating an Accordion with Single Mode
@@ -355,6 +401,97 @@ function Faq() {
     </VisibilityProvider>
   );
 }
+```
+
+-----
+
+## Performance Optimizations
+
+The library is optimized for performance with several built-in optimizations:
+
+- **Memoized Components**: All components (`VisibilityProvider`, `VisibilityTarget`, `VisibilityTrigger`) are memoized to prevent unnecessary re-renders.
+- **Stable Callbacks**: Hook callbacks are memoized and only recreate when dependencies change.
+- **Split Context**: State and actions are provided through separate contexts to minimize re-renders.
+- **Efficient Updates**: The reducer pattern ensures state updates are predictable and efficient.
+
+### Best Practices
+
+1. **Scope Your Providers**: Don't wrap your entire app unless necessary. Use multiple smaller providers for different sections.
+
+```jsx
+// ✅ Good - scoped provider
+function Dashboard() {
+  return (
+    <VisibilityProvider>
+      {/* Dashboard-specific visibility logic */}
+    </VisibilityProvider>
+  );
+}
+
+// ❌ Avoid - unnecessarily broad scope
+function App() {
+  return (
+    <VisibilityProvider>
+      <Router>
+        <Routes>
+          {/* Entire app */}
+        </Routes>
+      </Router>
+    </VisibilityProvider>
+  );
+}
+```
+
+2. **Use Meaningful Keys**: Choose descriptive keys for better debugging and maintainability.
+
+```jsx
+// ✅ Good
+<VisibilityTrigger triggerKey="user-profile-dropdown">
+
+// ❌ Avoid
+<VisibilityTrigger triggerKey="dropdown1">
+```
+
+-----
+
+## TypeScript Support
+
+The library is fully typed and provides excellent TypeScript support:
+
+```typescript
+import type { 
+  VisibilityState, 
+  VisibilityMode, 
+  UseVisibilityTargetResult,
+  VisibilityProviderProps,
+  VisibilityTargetProps,
+  VisibilityTriggerProps 
+} from 'react-visibility-manager';
+
+// Custom hook with full type safety
+const useCustomVisibility = (key: string): UseVisibilityTargetResult => {
+  return useVisibilityTarget(key);
+};
+
+// Typed component props
+interface CustomModalProps {
+  modalKey: string;
+  title: string;
+  children: React.ReactNode;
+}
+
+const CustomModal: React.FC<CustomModalProps> = ({ modalKey, title, children }) => {
+  const { isOpen, set } = useVisibilityTarget(modalKey);
+  
+  // TypeScript knows isOpen is boolean, set accepts boolean
+  return isOpen ? (
+    <div>
+      <h2>{title}</h2>
+      {children}
+      <button onClick={() => set(false)}>Close</button>
+    </div>
+  ) : null;
+};
 ```
 
 -----
